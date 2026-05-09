@@ -1,173 +1,176 @@
-﻿# VerifyChain 🔐
-## Product Authenticity Infrastructure for the Physical World
+# VerifyChain 🔐
+### Product Authenticity Infrastructure for the Physical World
 
-"Every other team built a tool for today's businesses. We built the infrastructure tomorrow's law requires."
+[![Version](https://img.shields.io/badge/version-1.0.0-blue.svg)](package.json)
+[![Status](https://img.shields.io/badge/status-production--ready-green.svg)]()
+[![Buildify](https://img.shields.io/badge/Competition-Buildify%20Kashmir%202026-gold.svg)]()
+[![Stack](https://img.shields.io/badge/Stack-Fullstack%20%7C%20Supabase%20%7C%20AI-orange.svg)]()
 
-🏆 Buildify Kashmir — NIT Srinagar 2026  
-Theme: Making Businesses Future-Proof
+> "Every other team built a tool for today's businesses. We built the infrastructure tomorrow's law requires."
 
-## The Problem We're Solving
+---
+
+## 📸 Product Showcase
+
+| **The Vision** | **The Process** |
+|:---:|:---:|
+| ![Landing](assets/images/home1.jpg) | ![How It Works](assets/images/home2.jpg) |
+| *Landing — Every Product. Provably Real.* | *Scan Any Product. Know It's Real.* |
+
+| **The Problem** | **The Verification** |
+|:---:|:---:|
+| ![The Problem](assets/images/home3.jpg) | ![Buyer Verification](assets/images/home4.jpg) |
+| *Counterfeits are destroying trust globally.* | *Verified Authentic Certificate.* |
+
+| **The Dashboard** | **The Detection** |
+|:---:|:---:|
+| ![Seller Dashboard](assets/images/home5.jpg) | ![Counterfeit Detection](assets/images/home6.jpg) |
+| *Generate Encrypted QR Batches.* | *Not Registered / Fraud Result.* |
+
+| **Future Vision** | **Architecture Overview** |
+|:---:|:---:|
+| ![Vision](assets/images/home7.jpg) | ![Platform Overview](assets/images/home8.jpg) |
+| *The Future of Commerce is Provably Authentic.* | *Scalable Infrastructure for Global Supply Chains.* |
+
+---
+
+## 🛑 The Problem: A $4.5 Trillion Crisis
+
 Fake products are not a minor inconvenience — they are an existential threat to businesses that depend on quality and trust.
 
-$4.5 trillion lost to counterfeit goods globally every year  
-70% of "Kashmiri saffron" sold online is fake or adulterated — real farmers lose income while fraudsters profit  
-A carpet weaver in Budgam has no way to prove his handwoven carpet is authentic — a factory in China makes the same claim  
-Pharmaceutical counterfeits kill over 1 million people annually — no verification at point of sale  
-Businesses that can't prove authenticity will lose to those who can — it's not a matter of if, but when
+*   **Global Economic Impact:** **$4.5 trillion** lost to counterfeit goods annually.
+*   **Regional Devastation:** **70%** of "Kashmiri saffron" sold online is fake. Real farmers lose income while fraudsters profit.
+*   **Artisanal Theft:** A carpet weaver in Budgam has no way to prove his handwoven carpet is authentic, while mass-produced fakes make the same claim.
+*   **Lethal Consequences:** Pharmaceutical counterfeits kill over **1 million people annually** due to lack of verification at the point of sale.
 
-## Why Businesses That Ignore This Are NOT Future-Proof
-A business selling premium products — saffron, Pashmina, olive oil, medicine — with no way to prove authenticity is one viral scandal away from collapse. One fake batch traced back to your brand. One buyer scammed with a counterfeit. One export rejection. The businesses that survive the next decade will be the ones that can prove what they sell is real.
+### Why Businesses Must Adapt
+A business selling premium products — saffron, Pashmina, medicine — with no way to prove authenticity is one viral scandal away from collapse. The businesses that survive the next decade will be the ones that can **prove** what they sell is real.
 
-## 🇪🇺 The Regulatory Tailwind Nobody Is Talking About
-The EU Digital Product Passport (DPP) regulation — part of the EU's Ecodesign for Sustainable Products Regulation — mandates that every physical product sold in Europe must carry a verifiable digital identity by 2026.  
-This is not optional. This is not voluntary. It is law.  
-Industries affected include: textiles, electronics, construction materials, batteries, packaging, consumer goods. The estimated market of products requiring DPP compliance: over 30 product categories covering billions of units per year.  
-VerifyChain is compliance infrastructure. We don't help businesses adapt to the future — we are the future they are legally required to adopt.
+---
+
+## 🇪🇺 The Regulatory Tailwind: EU Digital Product Passport (DPP)
+The **EU DPP** regulation mandates that every physical product sold in Europe must carry a verifiable digital identity by **2026**.
+
+**VerifyChain is compliance infrastructure.** We don't help businesses adapt to the future — we *are* the infrastructure they are legally required to adopt.
+
+---
 
 ## 💡 What is VerifyChain?
-VerifyChain gives every physical product a cryptographically signed digital identity — a unique, encrypted QR code that anyone (buyer, customs officer, regulator) can scan to instantly verify:
+VerifyChain gives every physical product a cryptographically signed digital identity — a unique, encrypted QR code that allows anyone to instantly verify:
 
-✅ Is this product authentic?  
-✅ Where did it come from?  
-✅ Who handled it, and when?  
-✅ Has this QR been tampered with or duplicated?
+*   ✅ **Authenticity:** Is this product real or a replica?
+*   ✅ **Provenance:** Where did it originate?
+*   ✅ **Chain of Custody:** Who handled it, and when?
+*   ✅ **Integrity:** Has this QR been tampered with or duplicated?
 
-No app required. Works on any phone. Verification in under 2 seconds.
+**No app required. Works on any phone. Verification in under 2 seconds.**
+
+---
 
 ## 🛠️ Core Features
-### 1. Encrypted QR Identity System
-Every product batch registered on VerifyChain receives a cryptographically signed QR code. The signature is mathematically bound to the product data — if anyone attempts to copy or spoof it, the signature breaks and the verification fails. Each QR is:
 
-Unique per unit or batch  
-Cryptographically signed using HMAC-SHA256  
-Impossible to duplicate without the private key  
-Scannable with any smartphone camera (no app needed)
+### 1. Encrypted QR Identity System
+Cryptographically signed QR codes using **HMAC-SHA256**. The signature is mathematically bound to the product data.
+*   Unique per unit or batch.
+*   Impossible to duplicate without the private key.
+*   Scannable with any smartphone camera.
 
 ### 2. AI-Powered Fraud Detection
 Real-time pattern analysis on every scan event. The system flags:
-
-Same QR scanned in two geographically impossible locations simultaneously  
-Abnormal scan velocity (100 scans in 60 seconds = likely automated attack)  
-Scanning patterns inconsistent with legitimate retail  
-Geographic anomalies (saffron "from Kashmir" being scanned in a Chinese warehouse)
+*   **Geographic Anomaly:** Same QR scanned in two distant locations simultaneously.
+*   **Velocity Anomaly:** Abnormal scan counts (e.g., 100 scans/min).
+*   **Retail Inconsistency:** Patterns inconsistent with legitimate consumer behavior.
 
 ### 3. Full Supply Chain Traceability
-Every handoff is recorded: Farm → Processor → Distributor → Seller → Buyer. The buyer's scan result shows the complete chain of custody with timestamps, locations, and verified handlers at each stage.
+End-to-end recording: **Farm → Processor → Distributor → Seller → Buyer**. Complete chain of custody with timestamps and verified locations.
 
 ### 4. Seller Dashboard & Analytics
+*   Register batches and generate printable PDF QR tag sheets.
+*   Real-time global scan map.
+*   Fraud alerts and batch-level performance analytics.
 
-Register product batches and generate QR tag sheets (printable PDF)  
-Real-time scan map — see where in the world your products are being verified  
-Fraud alerts and anomaly notifications  
-Batch-level analytics (which products get scanned most, scan-to-purchase conversion)
-
-### 5. EU Digital Product Passport Export
-Pro and Enterprise users can export product data in EU DPP-compliant format — ready for submission to EU regulatory systems. This alone is worth the subscription for any exporter.
-
-### 6. Government & Certification Integration
-
-Compatible with India's GI (Geographical Indication) tag system  
-Designed for integration with APEDA (Agricultural and Processed Food Products Export Development Authority)  
-J&K Government export council partnership pathway built-in
+### 5. EU DPP Export
+Generate regulatory-compliant data exports for EU systems — essential for any exporter targeting the European market.
 
 ---
 
-## How VerifyChain Works (Current Implementation)
+## ⚙️ Technical Implementation
 
-### QR generation flow
-1. Seller registers a batch from the dashboard.
-2. System creates a batch ID and a per-batch HMAC secret.
-3. For each unit, VerifyChain creates a payload (`bid`, `uid`, `pid`, `ts`).
-4. Payload is signed using HMAC-SHA256.
-5. Signed payload is encoded as token.
-6. Token is embedded in `#/verify/<token>` URL and rendered into QR.
+### QR Generation Flow
+1. **Registration:** Seller registers a batch in the dashboard.
+2. **Secret Generation:** System creates a batch ID and HMAC secret.
+3. **Payload Construction:** Payload contains `bid`, `uid`, `pid`, and `ts`.
+4. **Signing:** Payload is signed using **HMAC-SHA256**.
+5. **Encoding:** Signed payload is encoded into a secure token.
+6. **QR Rendering:** Token is embedded in a URL and rendered as a QR code.
 
-### Verification flow
-1. Any QR scanner opens the verification URL.
-2. App extracts token and routes to verify page.
-3. Supabase Edge Function validates token signature.
-4. Product, seller, and scan data are checked and returned.
-5. User sees verified details or clear fraud/not-registered result.
-
-### AI fraud analysis flow
-- Backend endpoint `/api/ai/fraud` can call Gemini for risk enrichment.
-- If Gemini key is unavailable, rule-based fraud analysis runs as fallback.
-- This guarantees reliability even without third-party AI availability.
+### Verification Flow
+1. **Scan:** User scans the QR code.
+2. **Routing:** URL routes to the verification engine.
+3. **Validation:** Supabase Edge Function validates the signature server-side.
+4. **Check:** Product, seller, and scan data are cross-referenced.
+5. **Result:** User receives a cryptographic proof of authenticity or a fraud warning.
 
 ---
 
-## Tech Architecture
+## 🏗️ Architecture & Stack
 
+### Stack
+*   **Frontend:** HTML5, Vanilla CSS, Modular ES6+ JavaScript
+*   **Backend:** Node.js + Express
+*   **Database/Auth:** Supabase (PostgreSQL, Realtime)
+*   **Serverless Logic:** Supabase Edge Functions (Deno)
+*   **AI Engine:** Gemini API (Fraud Enrichment) + Rule-based Fallback
+*   **Deployment:** Render Blueprint
+
+### Architecture Diagram
 ```text
-Frontend (SPA)
-  index.html + modular JS modules
-    -> Seller dashboard
-    -> QR generation
-    -> Buyer verify page
-    -> Fraud monitor
-
-Backend (Node.js + Express)
-  /api/config
-  /api/ai/fraud
-  static file serving + SPA fallback
-
-Supabase
-  PostgreSQL (batches, tokens, scans, alerts)
-  Auth
-  Realtime
-
-Edge Function (verify-qr)
-  server-side signature verification
+[ Physical Product ] -> [ Encrypted QR ] -> [ Smartphone Scan ]
+                                                  |
+                                                  v
+[ Supabase Edge Function ] <-> [ PostgreSQL DB ] <-> [ AI Fraud Engine ]
+           |                          |                      |
+           v                          v                      v
+[ Cryptographic Proof ]    [ Chain of Custody ]    [ Risk Assessment ]
 ```
-
-## Stack
-- Frontend: HTML, CSS, modular JavaScript
-- Backend: Node.js + Express
-- DB/Auth/Realtime: Supabase
-- Verification: Supabase Edge Function (Deno)
-- AI: Gemini API (optional) + local rules fallback
-- Hosting: Render
-- Tests: smoke tests + Playwright support
-
-## Local Setup
-```bash
-npm install
-npm start
-```
-
-Open `http://127.0.0.1:4173`
-
-## Environment Variables
-Use `.env.example` and set:
-
-- `PORT`
-- `VC_SUPABASE_URL`
-- `VC_SUPABASE_ANON_KEY`
-- `VC_EDGE_FUNCTION_URL`
-- `VC_GEMINI_API_KEY` (optional)
-- `VC_APP_VERSION` (optional)
-- `VC_DEMO_MODE` (`false` in production)
-
-## Supabase Setup
-1. Run `supabase/schema.sql`.
-2. Deploy function:
-```bash
-supabase functions deploy verify-qr --no-verify-jwt
-```
-3. Set function secrets:
-   - `VC_SB_URL`
-   - `VC_SB_SERVICE_ROLE_KEY`
-
-## Render Deployment
-Use `render.yaml` Blueprint deployment.
-
-Post-deploy checks:
-- `/healthz` returns OK
-- `/api/config` shows `demoMode: false`
-- Create batch -> scan QR -> verify result page works
 
 ---
 
-## Vision
-VerifyChain is not just anti-counterfeit tooling. It is authenticity and compliance infrastructure for future-proof businesses.
+## 🚀 Getting Started
 
+### Prerequisites
+*   Node.js (v18+)
+*   Supabase Account
+*   Gemini API Key (Optional, for AI fraud features)
+
+### Local Setup
+1. **Clone the repository**
+2. **Install dependencies:**
+   ```bash
+   npm install
+   ```
+3. **Configure Environment:**
+   Copy `.env.example` to `.env` and fill in your Supabase and API credentials.
+4. **Launch Development Server:**
+   ```bash
+   npm start
+   ```
+5. **Access the App:**
+   Open `http://127.0.0.1:4173`
+
+### Database Setup
+1. Execute the SQL schema found in `supabase/schema.sql` within your Supabase SQL Editor.
+2. Deploy the edge function:
+   ```bash
+   supabase functions deploy verify-qr --no-verify-jwt
+   ```
+
+---
+
+## 🔭 The Vision
+VerifyChain is not just anti-counterfeit tooling. It is **authenticity and compliance infrastructure** for future-proof businesses.
+
+> "Future-proof businesses won't just sell products. They'll prove them."
+
+---
+*Created for **Buildify Kashmir 2026** — NIT Srinagar*
