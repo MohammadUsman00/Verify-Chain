@@ -48,7 +48,7 @@ VC.views.fraud = async function() {
         `).join('')}
       </div>
       <div id="ai-result-section" style="display:none">
-        <div class="fraud-section-title">🤖 Claude AI Analysis</div>
+        <div class="fraud-section-title">🤖 Gemini AI Analysis</div>
         <div id="ai-result-content"></div>
       </div>
     </div>`;

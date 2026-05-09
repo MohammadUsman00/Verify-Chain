@@ -1,0 +1,16 @@
+{
+  "name": "verifychain",
+  "version": "1.0.0",
+  "private": true,
+  "description": "VerifyChain static SPA",
+  "scripts": {
+    "start": "serve . -l 4173",
+    "test:smoke": "node tests/smoke.mjs",
+    "test:e2e": "playwright test",
+    "test": "npm run test:smoke && npm run test:e2e"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.54.2",
+    "serve": "^14.2.4"
+  }
+}

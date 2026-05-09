@@ -1,6 +1,21 @@
 /* MODULE: DB */
 VC.db = {
+  isBackendReady() {
+    const { supabaseUrl, supabaseKey, edgeFunctionUrl } = VC.config;
+    return Boolean(
+      supabaseUrl &&
+      supabaseKey &&
+      edgeFunctionUrl &&
+      !supabaseUrl.includes('YOUR_SUPABASE_PROJECT_URL') &&
+      !supabaseKey.includes('YOUR_SUPABASE_ANON_KEY') &&
+      !edgeFunctionUrl.includes('YOUR_SUPABASE_PROJECT_URL')
+    );
+  },
+
   async signUp(email, password, sellerData) {
+    if (!this.isBackendReady()) {
+      throw new Error('Supabase is not configured. Use Demo login or add Supabase keys in VC.config.');
+    }
     const { data: authData, error: authError } = await VC.supabase.auth.signUp({ email, password });
     if (authError) throw authError;
 
@@ -24,6 +39,9 @@ VC.db = {
   },
 
   async signIn(email, password) {
+    if (!this.isBackendReady()) {
+      throw new Error('Supabase is not configured. Use Demo login or add Supabase keys in VC.config.');
+    }
     const { data, error } = await VC.supabase.auth.signInWithPassword({ email, password });
     if (error) throw error;
 
@@ -39,7 +57,9 @@ VC.db = {
   },
 
   async signOut() {
-    await VC.supabase.auth.signOut();
+    if (this.isBackendReady()) {
+      await VC.supabase.auth.signOut();
+    }
     VC.state.seller = null;
     VC.state.batches = [];
     VC.state.scans = [];
@@ -48,6 +68,7 @@ VC.db = {
   },
 
   async restoreSession() {
+    if (!this.isBackendReady()) return null;
     const { data: { session } } = await VC.supabase.auth.getSession();
     if (!session) return null;
 
@@ -84,6 +105,24 @@ VC.db = {
       status: 'active'
     };
 
+    if (!this.isBackendReady()) {
+      const tokens = await VC.crypto.generateBatchTokens({
+        ...batch,
+        units: formData.units
+      });
+      const localBatch = {
+        ...batch,
+        sellerName: VC.state.seller.business_name || VC.state.seller.name,
+        harvest: formData.harvest,
+        cert: formData.cert || null,
+        supplyChain: formData.supplyChain,
+        createdAt: Date.now()
+      };
+      VC.state.batches.unshift(localBatch);
+      VC.state.save();
+      return { batch: localBatch, tokens };
+    }
+
     const { data, error } = await VC.supabase.from('batches').insert(batch).select().single();
     if (error) throw error;
 
@@ -106,6 +145,9 @@ VC.db = {
 
   async getBatches() {
     if (!VC.state.seller) return [];
+    if (!this.isBackendReady()) {
+      return VC.state.batches || [];
+    }
     const { data, error } = await VC.supabase
       .from('batches')
       .select('*')
@@ -118,6 +160,15 @@ VC.db = {
   },
 
   async getBatchTokens(batchId) {
+    if (!this.isBackendReady()) {
+      const batch = VC.state.batches.find((b) => b.id === batchId);
+      if (!batch) return [];
+      const units = batch.units || 1;
+      return Array.from({ length: units }, (_, idx) => ({
+        unit_number: idx + 1,
+        token: batchId
+      }));
+    }
     const { data, error } = await VC.supabase
       .from('qr_tokens')
       .select('*')
@@ -130,11 +181,77 @@ VC.db = {
   async getBatch(id) {
     const local = VC.state.batches.find((b) => b.id === id);
     if (local) return local;
+    if (!this.isBackendReady()) return null;
     const { data } = await VC.supabase.from('batches').select('*').eq('id', id).single();
     return data || null;
   },
 
   async verifyQR(token) {
+    if (!this.isBackendReady()) {
+      let batchId = token;
+      if (!String(token).startsWith('VC-')) {
+        try {
+          const padded = token.replace(/-/g, '+').replace(/_/g, '/');
+          const decoded = JSON.parse(atob(padded));
+          batchId = decoded.bid || token;
+        } catch {
+          batchId = token;
+        }
+      }
+      const batch = VC.state.batches.find((b) => b.id === batchId);
+      if (!batch) {
+        return {
+          verified: false,
+          reason: 'NOT_FOUND',
+          message: 'This product is not registered in demo mode.'
+        };
+      }
+
+      const locationDisplay = 'Demo Location';
+      const scanRow = {
+        id: crypto.randomUUID(),
+        batchId: batch.id,
+        ts: Date.now(),
+        location: locationDisplay,
+        device: /Mobile|Android|iPhone|iPad/i.test(navigator.userAgent) ? 'mobile' : 'desktop',
+        flagged: false
+      };
+      VC.state.scans.unshift(scanRow);
+      VC.state.save();
+
+      return {
+        verified: true,
+        batch: {
+          id: batch.id,
+          product: batch.product,
+          category: batch.category,
+          origin: batch.origin,
+          farm: batch.farm,
+          harvest_date: batch.harvest_date || batch.harvest || '-',
+          cert_number: batch.cert_number || batch.cert || null,
+          supply_chain: batch.supply_chain || batch.supplyChain || [],
+          seller_name: batch.sellerName || VC.state.seller?.business_name || 'Verified Seller',
+          seller_location: VC.state.seller?.location || 'Kashmir, India',
+          seller_verified: true,
+          created_at: batch.created_at || new Date().toISOString(),
+          total_scans: VC.state.scans.filter((s) => s.batchId === batch.id).length
+        },
+        scan_history: VC.state.scans
+          .filter((s) => s.batchId === batch.id)
+          .slice(0, 10)
+          .map((s) => ({
+            location_display: s.location,
+            scanned_at: new Date(s.ts).toISOString(),
+            device_type: s.device,
+            flagged: s.flagged
+          })),
+        current_scan: {
+          location: locationDisplay,
+          scanned_at: new Date().toISOString()
+        }
+      };
+    }
+
     let lat = null;
     let lng = null;
     let city = null;
@@ -175,6 +292,9 @@ VC.db = {
 
   async getScans(limit = 50) {
     if (!VC.state.seller) return [];
+    if (!this.isBackendReady()) {
+      return VC.state.scans.slice(0, limit);
+    }
     const { data, error } = await VC.supabase
       .from('scans')
       .select('*')
@@ -195,6 +315,7 @@ VC.db = {
 
   async getFraudAlerts() {
     if (!VC.state.seller) return [];
+    if (!this.isBackendReady()) return [];
     const { data, error } = await VC.supabase
       .from('fraud_alerts')
       .select('*')
@@ -206,6 +327,7 @@ VC.db = {
   },
 
   subscribeToScans(callback) {
+    if (!this.isBackendReady()) return null;
     if (!VC.state.seller) return null;
     const channel = VC.supabase
       .channel('seller-scans')
@@ -231,6 +353,7 @@ VC.db = {
   },
 
   subscribeToFraudAlerts(callback) {
+    if (!this.isBackendReady()) return null;
     if (!VC.state.seller) return null;
     return VC.supabase
       .channel('fraud-alerts')
@@ -247,6 +370,7 @@ VC.db = {
   },
 
   async seedDemo() {
+    if (!VC.state.seller) return;
     const existing = await this.getBatches();
     if (existing.length > 0) return;
 
