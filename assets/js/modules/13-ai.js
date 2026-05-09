@@ -1,10 +1,5 @@
 /* MODULE: AI */
 VC.ai = {
-  hasGeminiKey() {
-    const key = VC.config.geminiApiKey || '';
-    return Boolean(key && !key.includes('YOUR_GEMINI_API_KEY'));
-  },
-
   haversineKm(aLat, aLng, bLat, bLng) {
     const toRad = (deg) => (deg * Math.PI) / 180;
     const R = 6371;
@@ -78,63 +73,23 @@ VC.ai = {
 
   async analyzeFraud(scanLog) {
     const localResult = this.ruleBasedAnalysis(scanLog);
-
-    // Free, no-key path: return local intelligence directly.
-    if (!this.hasGeminiKey()) {
-      return localResult;
-    }
-
     try {
-      const prompt = `You are VerifyChain's AI fraud detection engine for a product authenticity platform.
-Analyze these QR code scan logs and identify counterfeiting patterns.
-
-Scan Log:
-${JSON.stringify(scanLog, null, 2)}
-
-Identify:
-- Geographic impossibilities (same code scanned in two distant locations within minutes)
-- Bulk scanning anomalies (>10 scans in short period = bulk counterfeit testing)
-- Suspicious device patterns
-
-Respond ONLY with valid JSON, no markdown:
-{
-  "riskLevel": "low|medium|high|critical",
-  "alerts": [
-    {
-      "type": "string (short alert name)",
-      "severity": "low|medium|high|critical",
-      "description": "string (what was detected)",
-      "recommendation": "string (what seller should do)"
-    }
-  ],
-  "summary": "one sentence summary",
-  "legitimateScans": number,
-  "suspiciousScans": number
-}`;
-
-      const response = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${encodeURIComponent(VC.config.geminiApiKey)}`,
-        {
+      const response = await fetch('/api/ai/fraud', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({
-          contents: [{ parts: [{ text: prompt }] }],
-          generationConfig: {
-            temperature: 0.2,
-            maxOutputTokens: 800
-          }
+          scanLog
         })
       });
 
       if (!response.ok) return localResult;
       const data = await response.json();
-      const text = data.candidates?.[0]?.content?.parts?.[0]?.text?.replace(/```json|```/g, '').trim();
-      if (!text) return localResult;
-      return JSON.parse(text);
+      if (!data || !data.riskLevel) return localResult;
+      return data;
     } catch (err) {
-      console.warn('Gemini unavailable, using free rule engine', err);
+      console.warn('AI service unavailable, using free rule engine', err);
       return localResult;
     }
   }

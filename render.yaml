@@ -1,10 +1,9 @@
 services:
   - type: web
     name: verifychain
-    runtime: static
+    runtime: node
     buildCommand: npm ci && npm run test:smoke
-    staticPublishPath: .
-    routes:
-      - type: rewrite
-        source: /*
-        destination: /index.html
+    startCommand: npm start
+    envVars:
+      - key: VC_DEMO_MODE
+        value: "true"

@@ -8,7 +8,7 @@ module.exports = defineConfig({
     trace: 'on-first-retry'
   },
   webServer: {
-    command: 'npx serve . -l 4173',
+    command: 'node server.js',
     url: 'http://127.0.0.1:4173',
     reuseExistingServer: true,
     timeout: 30000

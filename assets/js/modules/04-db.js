@@ -3,12 +3,12 @@ VC.db = {
   isBackendReady() {
     const { supabaseUrl, supabaseKey, edgeFunctionUrl } = VC.config;
     return Boolean(
+      VC.supabase &&
       supabaseUrl &&
       supabaseKey &&
       edgeFunctionUrl &&
-      !supabaseUrl.includes('YOUR_SUPABASE_PROJECT_URL') &&
-      !supabaseKey.includes('YOUR_SUPABASE_ANON_KEY') &&
-      !edgeFunctionUrl.includes('YOUR_SUPABASE_PROJECT_URL')
+      /^https?:\/\//.test(supabaseUrl) &&
+      /^https?:\/\//.test(edgeFunctionUrl)
     );
   },
 

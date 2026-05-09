@@ -8,6 +8,8 @@ VC.views.restoreLandingEffects = function() {
 };
 
 document.addEventListener('DOMContentLoaded', async () => {
+  await VC.loadRuntimeConfig();
+
   // Landing interactions (preserved)
   const reveals = document.querySelectorAll('.reveal');
   const observer = new IntersectionObserver((entries) => {
