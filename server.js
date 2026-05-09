@@ -1,11 +1,30 @@
+const fs = require('node:fs');
 const path = require('node:path');
 const express = require('express');
 const compression = require('compression');
 const helmet = require('helmet');
-require('dotenv').config();
+const dotenv = require('dotenv');
+dotenv.config({ override: true });
 
 const app = express();
 const PORT = Number(process.env.PORT || 4173);
+
+function loadEnvFile() {
+  try {
+    const envPath = path.resolve(__dirname, '.env');
+    if (!fs.existsSync(envPath)) return {};
+    return dotenv.parse(fs.readFileSync(envPath));
+  } catch {
+    return {};
+  }
+}
+
+function readEnv(key, fallback = '') {
+  const envFile = loadEnvFile();
+  if (envFile[key] != null) return envFile[key];
+  if (process.env[key] != null) return process.env[key];
+  return fallback;
+}
 
 app.use(helmet({
   contentSecurityPolicy: false
@@ -90,16 +109,16 @@ function ruleBasedAnalysis(scanLog) {
 }
 
 function getPublicConfig() {
-  const supabaseUrl = process.env.VC_SUPABASE_URL || '';
-  const edgeFunctionUrl = process.env.VC_EDGE_FUNCTION_URL ||
+  const supabaseUrl = readEnv('VC_SUPABASE_URL', '');
+  const edgeFunctionUrl = readEnv('VC_EDGE_FUNCTION_URL', '') ||
     (supabaseUrl ? `${supabaseUrl}/functions/v1/verify-qr` : '');
 
   return {
     supabaseUrl,
-    supabaseKey: process.env.VC_SUPABASE_ANON_KEY || '',
+    supabaseKey: readEnv('VC_SUPABASE_ANON_KEY', ''),
     edgeFunctionUrl,
-    appVersion: process.env.VC_APP_VERSION || '1.0.0',
-    demoMode: parseBool(process.env.VC_DEMO_MODE, true)
+    appVersion: readEnv('VC_APP_VERSION', '1.0.0'),
+    demoMode: parseBool(readEnv('VC_DEMO_MODE', 'true'), true)
   };
 }
 
@@ -114,7 +133,7 @@ app.get('/api/config', (req, res) => {
 app.post('/api/ai/fraud', async (req, res) => {
   const scanLog = req.body?.scanLog || [];
   const baseline = ruleBasedAnalysis(scanLog);
-  const geminiKey = process.env.VC_GEMINI_API_KEY;
+  const geminiKey = readEnv('VC_GEMINI_API_KEY', '');
 
   if (!geminiKey) {
     return res.json(baseline);

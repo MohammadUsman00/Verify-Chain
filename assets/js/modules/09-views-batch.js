@@ -102,6 +102,7 @@ VC.views.generateBatch = async function() {
   }
 
   const btn = document.querySelector('.btn-full');
+  const originalLabel = btn.textContent;
   btn.textContent = '⚙ Generating...';
   btn.disabled = true;
 
@@ -117,34 +118,63 @@ VC.views.generateBatch = async function() {
     supplyChain
   };
 
-  const created = await VC.db.createBatch(formData);
-  const batch = created.batch;
-  const tokens = created.tokens || [];
+  try {
+    const created = await VC.db.createBatch(formData);
+    const batch = created.batch;
+    const tokens = created.tokens || [];
 
-  const grid = document.getElementById('qr-grid');
-  const section = document.getElementById('qr-sheet-section');
-  grid.innerHTML = '';
-  const showCount = Math.min(tokens.length || units, 12);
-  for (let i = 1; i <= showCount; i += 1) {
-    const cell = document.createElement('div');
-    cell.className = 'qr-cell';
-    const token = tokens[i - 1]?.token || '';
-    const url = VC.crypto.buildVerifyUrl(token);
-    const qrDiv = document.createElement('div');
-    VC.ui.generateQR(qrDiv, url);
-    cell.innerHTML = `<div class="qr-cell-frame"><div class="qr-cell-brand">VERIFYCHAIN</div></div>`;
-    cell.querySelector('.qr-cell-frame').prepend(qrDiv);
-    cell.innerHTML += `<div class="qr-cell-id">${batch.id}</div><div class="qr-cell-unit">Unit ${i} of ${units}</div><div class="qr-cell-product">${product}</div>`;
-    grid.appendChild(cell);
+    const grid = document.getElementById('qr-grid');
+    const section = document.getElementById('qr-sheet-section');
+    grid.innerHTML = '';
+    const showCount = Math.min(tokens.length || units, 12);
+    for (let i = 1; i <= showCount; i += 1) {
+      const cell = document.createElement('div');
+      cell.className = 'qr-cell';
+      const token = tokens[i - 1]?.token || '';
+      const url = VC.crypto.buildVerifyUrl(token);
+      const qrDiv = document.createElement('div');
+      VC.ui.generateQR(qrDiv, url);
+
+      const frame = document.createElement('div');
+      frame.className = 'qr-cell-frame';
+      const brand = document.createElement('div');
+      brand.className = 'qr-cell-brand';
+      brand.textContent = 'VERIFYCHAIN';
+      frame.appendChild(qrDiv);
+      frame.appendChild(brand);
+
+      const idEl = document.createElement('div');
+      idEl.className = 'qr-cell-id';
+      idEl.textContent = batch.id;
+
+      const unitEl = document.createElement('div');
+      unitEl.className = 'qr-cell-unit';
+      unitEl.textContent = `Unit ${i} of ${units}`;
+
+      const productEl = document.createElement('div');
+      productEl.className = 'qr-cell-product';
+      productEl.textContent = product;
+
+      cell.appendChild(frame);
+      cell.appendChild(idEl);
+      cell.appendChild(unitEl);
+      cell.appendChild(productEl);
+      grid.appendChild(cell);
+    }
+    if (units > 12) {
+      const note = document.createElement('div');
+      note.className = 'qr-overflow-note';
+      note.textContent = `+ ${units - 12} more QR codes generated. Print to see all.`;
+      grid.appendChild(note);
+    }
+    section.style.display = 'block';
+    section.scrollIntoView({ behavior: 'smooth' });
+    VC.ui.toast(`✓ Generated ${units} QR codes for ${batch.id}`, 'success');
+    btn.textContent = '✓ Generated Successfully';
+  } catch (err) {
+    const message = err?.message || 'Failed to generate QR batch. Check your Supabase/auth setup and try again.';
+    VC.ui.toast(message, 'error');
+    btn.textContent = originalLabel;
+    btn.disabled = false;
   }
-  if (units > 12) {
-    const note = document.createElement('div');
-    note.className = 'qr-overflow-note';
-    note.textContent = `+ ${units - 12} more QR codes generated. Print to see all.`;
-    grid.appendChild(note);
-  }
-  section.style.display = 'block';
-  section.scrollIntoView({ behavior: 'smooth' });
-  VC.ui.toast(`✓ Generated ${units} QR codes for ${batch.id}`, 'success');
-  btn.textContent = '✓ Generated Successfully';
 };

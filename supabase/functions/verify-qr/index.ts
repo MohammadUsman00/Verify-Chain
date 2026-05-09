@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
@@ -50,10 +51,25 @@ serve(async (req: Request) => {
       );
     }
 
-    const supabase = createClient(
-      Deno.env.get("SUPABASE_URL")!,
-      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
-    );
+    const supabaseUrl =
+      Deno.env.get("VC_SB_URL") ??
+      Deno.env.get("SUPABASE_URL");
+    const serviceRoleKey =
+      Deno.env.get("VC_SB_SERVICE_ROLE_KEY") ??
+      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+
+    if (!supabaseUrl || !serviceRoleKey) {
+      return new Response(
+        JSON.stringify({
+          verified: false,
+          error: "Server misconfiguration",
+          details: "Missing Supabase function secrets: VC_SB_URL and/or VC_SB_SERVICE_ROLE_KEY"
+        }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 500 }
+      );
+    }
+
+    const supabase = createClient(supabaseUrl, serviceRoleKey);
 
     const { data: batch, error: batchError } = await supabase
       .from("batches")

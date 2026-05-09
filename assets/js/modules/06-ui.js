@@ -112,14 +112,36 @@ VC.ui = {
   },
   generateQR(container, url) {
     container.innerHTML = '';
-    new QRCode(container, {
+    const size = Number(container?.dataset?.qrSize || 180);
+    container.style.background = '#ffffff';
+    container.style.padding = '8px';
+    container.style.borderRadius = '10px';
+    container.style.display = 'inline-block';
+    const baseOptions = {
       text: url,
-      width: 160,
-      height: 160,
-      colorDark: '#e8edf8',
-      colorLight: '#050810',
-      correctLevel: QRCode.CorrectLevel.H
-    });
+      width: size,
+      height: size,
+      colorDark: '#000000',
+      colorLight: '#ffffff',
+      quietZone: 8,
+      typeNumber: 0 // auto-size to avoid fixed-version overflow
+    };
+    try {
+      new QRCode(container, {
+        ...baseOptions,
+        correctLevel: QRCode.CorrectLevel.M
+      });
+    } catch (errMedium) {
+      try {
+        // Fallback for very long payloads that cannot fit at level M.
+        new QRCode(container, {
+          ...baseOptions,
+          correctLevel: QRCode.CorrectLevel.L
+        });
+      } catch (errLow) {
+        throw new Error('QR payload too large to encode. Reduce URL/token size.');
+      }
+    }
   },
   loader(msg = 'Loading...') {
     return `<div class="vc-loader"><div class="loader-ring"></div><div class="loader-msg">${msg}</div></div>`;

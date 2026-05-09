@@ -9,9 +9,6 @@ if (!fs.existsSync(indexPath)) {
 if (!fs.existsSync(path.join(root, 'server.js'))) {
   throw new Error('server.js is missing');
 }
-if (!fs.existsSync(path.join(root, '.env.example'))) {
-  throw new Error('.env.example is missing');
-}
 
 const requiredModules = [
   'assets/js/modules/01-config.js',

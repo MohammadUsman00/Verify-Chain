@@ -1,5 +1,9 @@
 /* MODULE: DB */
 VC.db = {
+  isUuid(value) {
+    return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(String(value || ''));
+  },
+
   isBackendReady() {
     const { supabaseUrl, supabaseKey, edgeFunctionUrl } = VC.config;
     return Boolean(
@@ -14,7 +18,7 @@ VC.db = {
 
   async signUp(email, password, sellerData) {
     if (!this.isBackendReady()) {
-      throw new Error('Supabase is not configured. Use Demo login or add Supabase keys in VC.config.');
+      throw new Error('Supabase is not configured. Start the app with npm start and verify /api/config returns your env values.');
     }
     const { data: authData, error: authError } = await VC.supabase.auth.signUp({ email, password });
     if (authError) throw authError;
@@ -40,7 +44,7 @@ VC.db = {
 
   async signIn(email, password) {
     if (!this.isBackendReady()) {
-      throw new Error('Supabase is not configured. Use Demo login or add Supabase keys in VC.config.');
+      throw new Error('Supabase is not configured. Start the app with npm start and verify /api/config returns your env values.');
     }
     const { data, error } = await VC.supabase.auth.signInWithPassword({ email, password });
     if (error) throw error;
@@ -105,7 +109,11 @@ VC.db = {
       status: 'active'
     };
 
-    if (!this.isBackendReady()) {
+    const canWriteRemote = this.isBackendReady()
+      && !VC.config.demoMode
+      && this.isUuid(VC.state.seller.id);
+
+    if (!canWriteRemote) {
       const tokens = await VC.crypto.generateBatchTokens({
         ...batch,
         units: formData.units
@@ -187,7 +195,8 @@ VC.db = {
   },
 
   async verifyQR(token) {
-    if (!this.isBackendReady()) {
+    const useLocalVerification = !this.isBackendReady() || VC.config.demoMode;
+    if (useLocalVerification) {
       let batchId = token;
       if (!String(token).startsWith('VC-')) {
         try {

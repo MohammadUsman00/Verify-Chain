@@ -4,6 +4,17 @@ services:
     runtime: node
     buildCommand: npm ci && npm run test:smoke
     startCommand: npm start
+    healthCheckPath: /healthz
     envVars:
+      - key: VC_SUPABASE_URL
+        sync: false
+      - key: VC_SUPABASE_ANON_KEY
+        sync: false
+      - key: VC_EDGE_FUNCTION_URL
+        sync: false
+      - key: VC_GEMINI_API_KEY
+        sync: false
+      - key: VC_APP_VERSION
+        value: "1.0.0"
       - key: VC_DEMO_MODE
-        value: "true"
+        value: "false"
