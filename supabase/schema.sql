@@ -200,6 +200,25 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
+-- Atomic one-time QR claim (prevents concurrent double redemption)
+CREATE OR REPLACE FUNCTION claim_one_time_qr_scan(p_token TEXT)
+RETURNS BOOLEAN
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $$
+DECLARE
+  v_updated INTEGER;
+BEGIN
+  UPDATE qr_tokens
+  SET active = FALSE
+  WHERE token = p_token
+    AND active = TRUE
+    AND scan_count = 0;
+  GET DIAGNOSTICS v_updated = ROW_COUNT;
+  RETURN v_updated = 1;
+END;
+$$;
+
 -- Generic increment helper used by frontend RPC
 CREATE OR REPLACE FUNCTION increment(table_name TEXT, column_name TEXT, row_id UUID, amount INTEGER DEFAULT 1)
 RETURNS VOID

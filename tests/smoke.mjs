@@ -24,6 +24,10 @@ const requiredModules = [
   'assets/js/modules/11-views-scan.js',
   'assets/js/modules/12-views-fraud.js',
   'assets/js/modules/13-ai.js',
+  'assets/js/modules/15-views-analytics.js',
+  'assets/js/modules/16-views-batch-detail.js',
+  'assets/js/modules/17-views-trust.js',
+  'assets/js/modules/18-views-settings.js',
   'assets/js/modules/14-init.js'
 ];
 

@@ -52,6 +52,31 @@ VC.crypto = {
     return 'Unlimited verifications';
   },
 
+  canonicalPayload(payload) {
+    const { sig, ...rest } = payload;
+    return JSON.stringify(rest);
+  },
+
+  async verifyToken(token, secret) {
+    const payload = this.decodeTokenPayload(token);
+    if (!payload || !payload.sig || !secret) {
+      return { valid: false, reason: 'INVALID_TOKEN', payload };
+    }
+    const expected = await this.sign(this.canonicalPayload(payload), secret);
+    if (expected.length !== payload.sig.length) {
+      return { valid: false, reason: 'INVALID_SIGNATURE', payload };
+    }
+    let diff = 0;
+    for (let i = 0; i < expected.length; i += 1) {
+      diff |= expected.charCodeAt(i) ^ payload.sig.charCodeAt(i);
+    }
+    return {
+      valid: diff === 0,
+      reason: diff === 0 ? null : 'INVALID_SIGNATURE',
+      payload
+    };
+  },
+
   async sign(data, secret) {
     const enc = new TextEncoder();
     const key = await crypto.subtle.importKey(

@@ -5,7 +5,8 @@ VC.config = {
   supabaseKey: '',
   edgeFunctionUrl: '',
   appVersion: '1.0.0',
-  demoMode: true
+  demoMode: false,
+  productionReady: false
 };
 
 VC.supabase = null;

@@ -1122,6 +1122,97 @@ h1,h2,h3,.dash-title,.batch-creator-header h1,.scan-header h1,.fraud-dashboard h
   font-weight:700;
   letter-spacing:.04em;
 }
+
+/* ── NEW PAGES: Analytics, Batch Detail, Trust, Settings ── */
+.page-shell { max-width: 1100px; margin: 0 auto; }
+.page-header { margin-bottom: 2rem; }
+.page-header-title { font-family: var(--font-display); font-size: 1.75rem; font-weight: 700; letter-spacing: .04em; }
+.page-header-sub { color: var(--text2); margin-top: .35rem; font-size: 1rem; }
+.dash-header-actions, .dash-section-actions { display: flex; gap: .65rem; flex-wrap: wrap; align-items: center; }
+.analytics-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 1rem; margin-bottom: 2rem; }
+.analytics-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-md); padding: 1.25rem; box-shadow: var(--shadow-royal); }
+.analytics-card--wide { grid-column: 1 / -1; }
+.analytics-card-title { font-family: var(--font-mono); font-size: .72rem; color: var(--gold); letter-spacing: .12em; text-transform: uppercase; margin-bottom: 1rem; }
+.bar-chart--days { display: flex; align-items: flex-end; justify-content: space-between; gap: .5rem; height: 160px; padding-top: .5rem; }
+.bar-col { flex: 1; display: flex; flex-direction: column; align-items: center; height: 100%; justify-content: flex-end; gap: .35rem; }
+.bar-fill { width: 100%; max-width: 36px; background: linear-gradient(180deg, var(--gold-light), var(--gold-dim)); border-radius: 3px 3px 0 0; min-height: 4px; transition: height .6s ease; }
+.bar-label { font-family: var(--font-mono); font-size: .62rem; color: var(--text3); }
+.bar-val { font-family: var(--font-mono); font-size: .68rem; color: var(--text2); }
+.device-mix { display: flex; flex-direction: column; gap: .75rem; }
+.device-row { display: grid; grid-template-columns: 100px 1fr 40px; align-items: center; gap: .75rem; font-size: .88rem; }
+.device-bar-track { height: 6px; background: var(--surface2); border-radius: 3px; overflow: hidden; }
+.device-bar-fill { height: 100%; background: linear-gradient(90deg, var(--gold-dim), var(--gold-light)); border-radius: 3px; }
+.rank-row { display: grid; grid-template-columns: 1fr 80px 36px; gap: .75rem; align-items: center; margin-bottom: .65rem; font-size: .85rem; }
+.rank-row--click { cursor: pointer; padding: .4rem; border-radius: 6px; transition: background .2s; }
+.rank-row--click:hover { background: rgba(212,175,55,.06); }
+.rank-row--click .rank-product { grid-column: 1 / -1; font-size: .78rem; color: var(--text3); margin-top: -.25rem; }
+.rank-loc { color: var(--text2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.rank-bar-track { height: 5px; background: var(--surface2); border-radius: 2px; overflow: hidden; }
+.rank-bar-fill { height: 100%; background: linear-gradient(90deg, var(--gold-dim), var(--gold)); border-radius: 2px; }
+.rank-count { text-align: right; color: var(--gold-light); }
+.batch-detail-hero { background: linear-gradient(165deg, var(--surface), rgba(26,18,40,.9)); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 1.5rem; margin-bottom: 1.25rem; box-shadow: var(--shadow-royal); border-left: 3px solid var(--batch-accent, var(--gold)); }
+.batch-detail-hero-top { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: .75rem; margin-bottom: .75rem; }
+.batch-detail-title { font-family: var(--font-display); font-size: 1.5rem; font-weight: 700; }
+.batch-detail-id { color: var(--text3); margin-top: .25rem; }
+.batch-detail-chips { display: flex; flex-wrap: wrap; gap: .5rem; margin-top: 1rem; align-items: center; }
+.detail-chip { font-family: var(--font-mono); font-size: .68rem; color: var(--text2); padding: .2rem .55rem; border: 1px solid var(--border2); border-radius: 4px; }
+.detail-chip--warn { color: var(--red); border-color: rgba(232,93,93,.3); }
+.batch-detail-actions { display: flex; flex-wrap: wrap; gap: .5rem; margin-bottom: 1.5rem; }
+.batch-btn--gold { border-color: var(--gold)!important; color: var(--gold-light)!important; }
+.batch-btn--danger { border-color: rgba(232,93,93,.4)!important; color: var(--red)!important; }
+.detail-kv { display: flex; justify-content: space-between; padding: .6rem 0; border-bottom: 1px solid var(--border2); font-size: .9rem; }
+.detail-kv span:first-child { color: var(--text3); font-family: var(--font-mono); font-size: .72rem; text-transform: uppercase; letter-spacing: .06em; }
+.trust-hero-card { text-align: center; padding: 2.5rem 1.5rem; background: linear-gradient(165deg, rgba(212,175,55,.08), var(--surface)); border: 1px solid var(--border); border-radius: var(--radius-lg); margin-bottom: 2rem; }
+.trust-hero-icon { font-size: 2.5rem; margin-bottom: 1rem; }
+.trust-hero-card h2 { font-family: var(--font-display); font-size: 1.35rem; margin-bottom: .75rem; }
+.trust-hero-card p { color: var(--text2); max-width: 520px; margin: 0 auto; }
+.trust-steps { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem; margin-bottom: 2rem; }
+.trust-step-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-md); padding: 1.25rem; box-shadow: var(--shadow-royal); }
+.trust-step-num { color: var(--gold); font-size: .85rem; margin-bottom: .5rem; }
+.trust-step-card h3 { font-family: var(--font-display); font-size: .95rem; margin-bottom: .5rem; }
+.trust-step-card p { font-size: .88rem; color: var(--text2); line-height: 1.5; }
+.trust-list { list-style: none; display: flex; flex-direction: column; gap: .65rem; font-size: .9rem; color: var(--text2); }
+.trust-list strong { color: var(--cream); }
+.trust-body { color: var(--text2); font-size: .92rem; line-height: 1.6; margin-bottom: 1rem; }
+.settings-links { display: flex; flex-wrap: wrap; gap: .5rem; }
+.token-table-wrap { overflow-x: auto; }
+.token-table { width: 100%; border-collapse: collapse; font-size: .82rem; }
+.token-table th { font-family: var(--font-mono); font-size: .65rem; color: var(--text3); text-transform: uppercase; letter-spacing: .08em; text-align: left; padding: .5rem; border-bottom: 1px solid var(--border); }
+.token-table td { padding: .55rem .5rem; border-bottom: 1px solid var(--border2); color: var(--text2); }
+.token-status { color: var(--green); font-family: var(--font-mono); font-size: .68rem; }
+.token-status--off { color: var(--gold); }
+.token-table-more { font-size: .78rem; color: var(--text3); margin-top: .75rem; }
+@media (max-width: 900px) {
+  .analytics-grid { grid-template-columns: 1fr; }
+  .trust-steps { grid-template-columns: 1fr 1fr; }
+  .rank-row { grid-template-columns: 1fr 60px 32px; }
+}
+@media (max-width: 768px) {
+  .trust-steps { grid-template-columns: 1fr; }
+  .app-nav-right .app-nav-btn:nth-child(n+3):nth-child(-n+6) { display: none; }
+}
+
+.prod-banner {
+  background: linear-gradient(90deg, rgba(212,175,55,.12), rgba(26,18,40,.9));
+  border-bottom: 1px solid var(--border);
+  color: var(--gold-light);
+  font-family: var(--font-mono);
+  font-size: .72rem;
+  letter-spacing: .06em;
+  text-align: center;
+  padding: .5rem 1rem;
+}
+.prod-banner--ok {
+  background: linear-gradient(90deg, rgba(126,201,154,.12), rgba(26,18,40,.9));
+  color: var(--green);
+}
+.verify-mode-badge {
+  font-size: .68rem;
+  color: var(--gold-light);
+  margin-bottom: .75rem;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+}
 </style>
 </head>
 <body>
@@ -1163,7 +1254,9 @@ h1,h2,h3,.dash-title,.batch-creator-header h1,.scan-header h1,.fraud-dashboard h
     <a href="#features">Solution</a>
     <a href="#scale">Scale</a>
     <a href="#pricing">Pricing</a>
-    <a href="#" class="nav-cta">Get Access</a>
+    <a href="#/trust">Trust</a>
+    <a href="#/scan">Scan</a>
+    <a href="#/seller" class="nav-cta">Seller Portal</a>
   </div>
   <button class="hamburger" aria-label="Menu">
     <span></span><span></span><span></span>
@@ -1185,7 +1278,7 @@ h1,h2,h3,.dash-title,.batch-creator-header h1,.scan-header h1,.fraud-dashboard h
       <span class="line2">Provably Real.</span>
     </h1>
     <p class="hero-sub">
-      Fake products cost the world <strong>$4.5 trillion a year.</strong> VerifyChain gives every physical product an encrypted digital identity — scan once, verify instantly, trust forever.
+      Fake products cost the world <strong>$4.5 trillion a year.</strong> VerifyChain gives every physical product a cryptographically signed digital identity — scan once, verify instantly, trust forever.
     </p>
     <div class="hero-actions">
       <a href="#/seller" class="btn-primary">Start Free →</a>
@@ -1276,7 +1369,7 @@ h1,h2,h3,.dash-title,.batch-creator-header h1,.scan-header h1,.fraud-dashboard h
         </div>
         <div class="scan-step">
           <div class="scan-step-num">02</div>
-          <div class="scan-step-text"><strong>QR tag is attached</strong> to each unit. Each tag is unique, encrypted, one-time-use.</div>
+          <div class="scan-step-text"><strong>QR tag is attached</strong> to each unit. Each tag is unique, HMAC-signed, and policy-sealed.</div>
         </div>
         <div class="scan-step">
           <div class="scan-step-num">03</div>
@@ -1386,7 +1479,7 @@ h1,h2,h3,.dash-title,.batch-creator-header h1,.scan-header h1,.fraud-dashboard h
       <div class="feat-card reveal reveal-delay-1">
         <div class="feat-num">FEATURE / 01</div>
         <div class="feat-icon">🔐</div>
-        <h3>Encrypted QR Identity</h3>
+        <h3>Signed QR Identity</h3>
         <p>Each product batch gets a cryptographically signed QR code. Impossible to duplicate or spoof — the signature breaks if anyone tries to copy it.</p>
         <span class="feat-tag tag-core">Core Infrastructure</span>
       </div>
@@ -1661,6 +1754,10 @@ h1,h2,h3,.dash-title,.batch-creator-header h1,.scan-header h1,.fraud-dashboard h
 <script src="assets/js/modules/11-views-scan.js"></script>
 <script src="assets/js/modules/12-views-fraud.js"></script>
 <script src="assets/js/modules/13-ai.js"></script>
+<script src="assets/js/modules/15-views-analytics.js"></script>
+<script src="assets/js/modules/16-views-batch-detail.js"></script>
+<script src="assets/js/modules/17-views-trust.js"></script>
+<script src="assets/js/modules/18-views-settings.js"></script>
 <script src="assets/js/modules/14-init.js"></script>
 </body>
 </html>

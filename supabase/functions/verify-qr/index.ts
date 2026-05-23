@@ -196,6 +196,26 @@ serve(async (req: Request) => {
     const maxScans = batch.max_scans_per_unit ?? 3;
     const priorScans = qrRow.scan_count ?? 0;
 
+    if (policy === "single" && priorScans === 0) {
+      const { data: claimed, error: claimError } = await supabase.rpc("claim_one_time_qr_scan", {
+        p_token: token
+      });
+      if (!claimError && claimed !== true) {
+        return new Response(
+          JSON.stringify({
+            verified: false,
+            reason: "ALREADY_REDEEMED",
+            message: "This one-time seal was already redeemed. Further scans may indicate a duplicated label.",
+            batch_id: batch.id,
+            product: batch.product,
+            unit_number: qrRow.unit_number,
+            scan_policy: policy
+          }),
+          { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+    }
+
     if (policy === "single" && priorScans >= 1) {
       await supabase.from("scans").insert({
         batch_id: batch.id,
@@ -283,10 +303,6 @@ serve(async (req: Request) => {
       });
     }
 
-    if (policy === "single") {
-      await supabase.from("qr_tokens").update({ active: false }).eq("id", qrRow.id);
-    }
-
     const { data: recentScans } = await supabase
       .from("scans")
       .select("location_display, scanned_at, device_type, flagged")
@@ -309,6 +325,7 @@ serve(async (req: Request) => {
     return new Response(
       JSON.stringify({
         verified: true,
+        verification_mode: "server",
         batch: {
           id: batch.id,
           product: batch.product,

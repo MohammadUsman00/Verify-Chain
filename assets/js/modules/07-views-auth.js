@@ -23,7 +23,7 @@ VC.views.auth = function(mode = 'login') {
             : `Have an account? <a href="#" onclick="VC.views.auth('login');return false">Sign In →</a>`
           }
         </div>
-        <div class="auth-demo-note"><span>Demo: </span><a href="#" onclick="VC.views.demoLogin();return false">Skip login (use demo data)</a></div>
+        <div class="auth-demo-note"><span>Training: </span><a href="#" onclick="VC.views.demoLogin();return false">Offline mode (local crypto only)</a></div>
       </div>
     </div>
   `;
@@ -60,7 +60,7 @@ VC.views.submitAuth = async function(mode) {
   }
 };
 
-VC.views.demoLogin = function() {
+VC.views.demoLogin = async function() {
   VC.state.seller = {
     id: 'demo-seller-001',
     name: 'Aadil Wani',
@@ -69,26 +69,33 @@ VC.views.demoLogin = function() {
     location: 'Pampore, Pulwama, Kashmir',
     plan: 'pro',
     verified: true,
-    total_tags_issued: 62
+    total_tags_issued: 0
   };
-  VC.state.batches = [
-    {
-      id: 'VC-2025-0047',
-      product: 'Kashmiri Saffron Grade A',
-      category: 'saffron',
-      origin: 'Pampore, Pulwama District, J&K',
-      farm: 'Wani Family Farm (Est. 1962)',
-      harvest_date: 'October 2025',
-      units: 50,
-      cert_number: 'KVIB-K-2025-7821',
-      supply_chain: ['Wani Family Farm - Pampore', 'KVIB Certification Lab', 'Wani Premium Exports Processing', 'Verified Seller']
-    }
-  ];
-  VC.state.scans = [
-    { id: '1', batchId: 'VC-2025-0047', ts: Date.now() - 3600000, location: 'Mumbai, MH', device: 'mobile', flagged: false },
-    { id: '2', batchId: 'VC-2025-0047', ts: Date.now() - 7200000, location: 'London, UK', device: 'desktop', flagged: true }
-  ];
+  VC.state.batches = [];
+  VC.state.scans = [];
+  VC.state.tokenScans = {};
+
+  const batchId = 'VC-2025-0047';
+  const hmacSecret = await VC.crypto.generateSecret();
+  const batch = {
+    id: batchId,
+    product: 'Kashmiri Saffron Grade A',
+    category: 'saffron',
+    origin: 'Pampore, Pulwama District, J&K',
+    farm: 'Wani Family Farm (Est. 1962)',
+    harvest_date: 'October 2025',
+    units: 3,
+    cert_number: 'KVIB-K-2025-7821',
+    supply_chain: ['Wani Family Farm - Pampore', 'KVIB Certification Lab', 'Wani Premium Exports'],
+    hmac_secret: hmacSecret,
+    scan_policy: 'single',
+    max_scans_per_unit: 1,
+    status: 'active'
+  };
+  const tokens = await VC.crypto.generateBatchTokens({ ...batch, units: 3 });
+  VC.state.batches.push({ ...batch, tokens });
+  VC.state.seller.total_tags_issued = 3;
   VC.state.save();
-  VC.ui.toast('Demo mode active', 'info');
+  VC.ui.toast('Offline training batch minted with real HMAC tags', 'info');
   VC.router.go('seller');
 };

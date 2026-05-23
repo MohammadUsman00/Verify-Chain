@@ -66,8 +66,16 @@ document.addEventListener('DOMContentLoaded', async () => {
     goVerify: () => VC.router.go('scan'),
     goFraud: () => VC.router.go('fraud'),
     goScan: () => VC.router.go('scan'),
+    goAnalytics: () => VC.router.go('analytics'),
+    goTrust: () => VC.router.go('trust'),
+    goSettings: () => VC.router.go('settings'),
     reset: () => { localStorage.clear(); location.reload(); }
   };
   console.log('%cVerifyChain', 'font-size:1.2rem;font-weight:bold;color:#d4af37');
+  console.log(
+    VC.config.productionReady
+      ? 'Production verification: ON (server HMAC)'
+      : 'Training mode: configure .env + VC_DEMO_MODE=false for production'
+  );
   console.log('Nav: verifychain.goSeller() | verifychain.goVerify() | verifychain.goFraud()');
 });

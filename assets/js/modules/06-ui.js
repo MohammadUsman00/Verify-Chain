@@ -1,8 +1,19 @@
 /* MODULE: UI COMPONENTS */
 VC.ui = {
+  productionBanner() {
+    if (VC.config.productionReady) {
+      return '<div class="prod-banner prod-banner--ok">Production verification active · HMAC enforced server-side</div>';
+    }
+    const msg = !VC.db.isBackendReady()
+      ? 'Offline training mode — configure Supabase in .env for server-side verification'
+      : 'Demo mode — set VC_DEMO_MODE=false for production verification';
+    return `<div class="prod-banner">${msg}</div>`;
+  },
+
   appNav() {
     const s = VC.state.seller;
     return `
+    ${VC.ui.productionBanner()}
     <nav class="app-nav">
       <div class="app-nav-left">
         <button class="app-logo-btn" onclick="VC.router.go('')">

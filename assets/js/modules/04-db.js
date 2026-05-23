@@ -1,5 +1,19 @@
 /* MODULE: DB */
 VC.db = {
+  BATCH_SELECT:
+    'id,seller_id,product,category,origin,farm,harvest_date,units,cert_number,supply_chain,scan_policy,max_scans_per_unit,status,scan_count,created_at,updated_at',
+
+  sanitizeBatch(batch) {
+    if (!batch) return batch;
+    const copy = { ...batch };
+    delete copy.hmac_secret;
+    return copy;
+  },
+
+  isProductionVerify() {
+    return this.isBackendReady() && !VC.config.demoMode;
+  },
+
   isUuid(value) {
     return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(String(value || ''));
   },
@@ -116,9 +130,7 @@ VC.db = {
       status: 'active'
     };
 
-    const canWriteRemote = this.isBackendReady()
-      && !VC.config.demoMode
-      && this.isUuid(VC.state.seller.id);
+    const canWriteRemote = this.isBackendReady() && this.isUuid(VC.state.seller.id);
 
     if (!canWriteRemote) {
       const tokens = await VC.crypto.generateBatchTokens({
@@ -139,10 +151,10 @@ VC.db = {
       return { batch: localBatch, tokens };
     }
 
-    const { data, error } = await VC.supabase.from('batches').insert(batch).select().single();
+    const { data, error } = await VC.supabase.from('batches').insert(batch).select(this.BATCH_SELECT).single();
     if (error) throw error;
 
-    const tokens = await VC.crypto.generateBatchTokens({ ...data, hmac_secret: hmacSecret });
+    const tokens = await VC.crypto.generateBatchTokens({ ...data, id: batchId, hmac_secret: hmacSecret });
     const tokenRows = tokens.map((t) => ({
       batch_id: batchId,
       unit_number: t.unit,
@@ -159,25 +171,25 @@ VC.db = {
       amount: formData.units
     });
 
-    VC.state.batches.unshift({ ...data, tokens });
+    VC.state.batches.unshift({ ...this.sanitizeBatch(data), tokens });
     VC.state.save();
-    return { batch: data, tokens };
+    return { batch: this.sanitizeBatch(data), tokens };
   },
 
   async getBatches() {
     if (!VC.state.seller) return [];
     if (!this.isBackendReady()) {
-      return VC.state.batches || [];
+      return (VC.state.batches || []).map((b) => this.sanitizeBatch(b));
     }
     const { data, error } = await VC.supabase
       .from('batches')
-      .select('*')
+      .select(this.BATCH_SELECT)
       .eq('seller_id', VC.state.seller.id)
       .order('created_at', { ascending: false });
     if (error) throw error;
-    VC.state.batches = data || [];
+    VC.state.batches = (data || []).map((b) => this.sanitizeBatch(b));
     VC.state.save();
-    return data || [];
+    return VC.state.batches;
   },
 
   async getBatchTokens(batchId) {
@@ -210,25 +222,55 @@ VC.db = {
     const local = VC.state.batches.find((b) => b.id === id);
     if (local) return local;
     if (!this.isBackendReady()) return null;
-    const { data } = await VC.supabase.from('batches').select('*').eq('id', id).single();
-    return data || null;
+    const { data } = await VC.supabase.from('batches').select(this.BATCH_SELECT).eq('id', id).single();
+    return data ? this.sanitizeBatch(data) : null;
   },
 
   _localScanKey(token, batchId) {
     return token && token.length > 20 ? token : `${batchId}:legacy`;
   },
 
-  _checkLocalScanPolicy(batch, token) {
+  _resolveTokenRegistry(batch, token, payload) {
+    const tokens = batch.tokens || [];
+    if (!tokens.length) {
+      return {
+        ok: false,
+        reason: 'UNKNOWN_TOKEN',
+        message: 'No token registry for this batch. Mint QR tags again or connect Supabase.'
+      };
+    }
+    const entry = tokens.find((t) => t.token === token);
+    if (!entry) {
+      return {
+        ok: false,
+        reason: 'UNKNOWN_TOKEN',
+        message: 'This QR is not registered for this batch.'
+      };
+    }
+    const unit = entry.unit ?? entry.unit_number;
+    if (payload.uid != null && unit !== payload.uid) {
+      return { ok: false, reason: 'UNIT_MISMATCH', message: 'Token unit identity does not match registry.' };
+    }
+    if (payload.jti && entry.jti && payload.jti !== entry.jti) {
+      return { ok: false, reason: 'INVALID_SIGNATURE', message: 'Token identity mismatch — possible clone.' };
+    }
+    if (entry.active === false) {
+      return { ok: false, reason: 'DEACTIVATED', message: 'This QR tag has been deactivated.' };
+    }
+    return { ok: true, entry };
+  },
+
+  _checkLocalScanPolicy(batch, token, registryEntry) {
     const policy = batch.scan_policy || 'limited';
     const max = batch.max_scans_per_unit ?? 3;
     const key = this._localScanKey(token, batch.id);
-    const used = VC.state.tokenScans[key] || 0;
+    const used = registryEntry?.scan_count ?? VC.state.tokenScans[key] ?? 0;
 
     if (policy === 'single' && used >= 1) {
       return {
         ok: false,
         reason: 'ALREADY_REDEEMED',
-        message: 'This one-time seal was already redeemed in demo mode.',
+        message: 'This one-time seal was already redeemed.',
         used
       };
     }
@@ -241,103 +283,161 @@ VC.db = {
         max
       };
     }
-    return { ok: true, used, max, policy, remaining: policy === 'unlimited' ? null : Math.max(0, (policy === 'single' ? 1 : max) - used - 1) };
+    const cap = policy === 'single' ? 1 : policy === 'limited' ? max : null;
+    return {
+      ok: true,
+      used,
+      max,
+      policy,
+      remaining: cap == null ? null : Math.max(0, cap - used - 1)
+    };
+  },
+
+  _recordLocalScan(batch, token, registryEntry, flagged = false) {
+    const key = this._localScanKey(token, batch.id);
+    VC.state.tokenScans[key] = (VC.state.tokenScans[key] || 0) + 1;
+    if (registryEntry) {
+      registryEntry.scan_count = (registryEntry.scan_count || 0) + 1;
+      if (batch.scan_policy === 'single') registryEntry.active = false;
+    }
+    const locationDisplay = 'Local verification';
+    const scanRow = {
+      id: crypto.randomUUID(),
+      batchId: batch.id,
+      ts: Date.now(),
+      location: locationDisplay,
+      device: /Mobile|Android|iPhone|iPad/i.test(navigator.userAgent) ? 'mobile' : 'desktop',
+      flagged
+    };
+    VC.state.scans.unshift(scanRow);
+    VC.state.save();
+    return { usedAfter: VC.state.tokenScans[key], scanRow, locationDisplay };
+  },
+
+  _buildVerifySuccess(batch, payload, policyCheck, priorScans, locationDisplay) {
+    const unitNumber = payload.uid || 1;
+    const fingerprint = payload.jti ? VC.crypto.shortFingerprint(payload.jti) : null;
+    const usedAfter = policyCheck.used + 1;
+    return {
+      verified: true,
+      verification_mode: this.isProductionVerify() ? 'server' : 'local',
+      batch: {
+        id: batch.id,
+        product: batch.product,
+        category: batch.category,
+        origin: batch.origin,
+        farm: batch.farm,
+        harvest_date: batch.harvest_date || batch.harvest || '-',
+        cert_number: batch.cert_number || batch.cert || null,
+        supply_chain: batch.supply_chain || batch.supplyChain || [],
+        seller_name: batch.sellerName || VC.state.seller?.business_name || 'Verified Seller',
+        seller_location: VC.state.seller?.location || 'Kashmir, India',
+        seller_verified: VC.state.seller?.verified !== false,
+        created_at: batch.created_at || new Date().toISOString(),
+        total_scans: VC.state.scans.filter((s) => s.batchId === batch.id).length,
+        scan_policy: batch.scan_policy || 'limited',
+        max_scans_per_unit: batch.max_scans_per_unit ?? 3
+      },
+      unit: {
+        number: unitNumber,
+        fingerprint,
+        jti: payload.jti,
+        first_scan: priorScans === 0,
+        scans_used: usedAfter,
+        scans_remaining: policyCheck.remaining
+      },
+      scan_policy: {
+        policy: batch.scan_policy || 'limited',
+        max_scans: batch.scan_policy === 'unlimited' ? null : (batch.max_scans_per_unit ?? 3),
+        scans_used: usedAfter,
+        scans_remaining: policyCheck.remaining
+      },
+      trust_score: priorScans === 0 ? 98 : Math.max(72, 98 - priorScans * 8),
+      scan_history: VC.state.scans
+        .filter((s) => s.batchId === batch.id)
+        .slice(0, 10)
+        .map((s) => ({
+          location_display: s.location,
+          scanned_at: new Date(s.ts).toISOString(),
+          device_type: s.device,
+          flagged: s.flagged
+        })),
+      current_scan: {
+        location: locationDisplay,
+        scanned_at: new Date().toISOString()
+      }
+    };
+  },
+
+  async _verifyLocally(token) {
+    const payload = VC.crypto.decodeTokenPayload(token);
+    if (!payload) {
+      return { verified: false, reason: 'INVALID_TOKEN', message: 'QR code is malformed or corrupted.' };
+    }
+
+    const batch = VC.state.batches.find((b) => b.id === payload.bid);
+    if (!batch) {
+      return { verified: false, reason: 'NOT_FOUND', message: 'This product is not registered in VerifyChain.' };
+    }
+
+    if (batch.status && batch.status !== 'active') {
+      return {
+        verified: false,
+        reason: 'RECALLED',
+        message: 'This product batch has been recalled or suspended by the seller.'
+      };
+    }
+
+    if (!batch.hmac_secret) {
+      return {
+        verified: false,
+        reason: 'SERVER_REQUIRED',
+        message: 'This batch must be verified via the production server. Configure Supabase in .env and set VC_DEMO_MODE=false.'
+      };
+    }
+
+    const sigResult = await VC.crypto.verifyToken(token, batch.hmac_secret);
+    if (!sigResult.valid) {
+      return {
+        verified: false,
+        reason: 'INVALID_SIGNATURE',
+        message: 'Invalid cryptographic signature. This QR may be counterfeit.',
+        batch_id: batch.id,
+        product: batch.product
+      };
+    }
+
+    const registry = this._resolveTokenRegistry(batch, token, payload);
+    if (!registry.ok) {
+      return {
+        verified: false,
+        reason: registry.reason,
+        message: registry.message,
+        batch_id: batch.id,
+        product: batch.product
+      };
+    }
+
+    const priorScans = registry.entry.scan_count ?? VC.state.tokenScans[this._localScanKey(token, batch.id)] ?? 0;
+    const policyCheck = this._checkLocalScanPolicy(batch, token, registry.entry);
+    if (!policyCheck.ok) {
+      return {
+        verified: false,
+        reason: policyCheck.reason,
+        message: policyCheck.message,
+        batch_id: batch.id,
+        product: batch.product,
+        scan_policy: policyCheck.policy
+      };
+    }
+
+    const { locationDisplay } = this._recordLocalScan(batch, token, registry.entry, priorScans > 0);
+    return this._buildVerifySuccess(batch, payload, policyCheck, priorScans, locationDisplay);
   },
 
   async verifyQR(token) {
-    const useLocalVerification = !this.isBackendReady() || VC.config.demoMode;
-    if (useLocalVerification) {
-      const decoded = VC.crypto.decodeTokenPayload(token);
-      const batchId = decoded?.bid || (String(token).startsWith('VC-') ? token : null);
-      const batch = VC.state.batches.find((b) => b.id === batchId);
-      if (!batch) {
-        return {
-          verified: false,
-          reason: 'NOT_FOUND',
-          message: 'This product is not registered in demo mode.'
-        };
-      }
-
-      const policyCheck = this._checkLocalScanPolicy(batch, token);
-      if (!policyCheck.ok) {
-        return {
-          verified: false,
-          reason: policyCheck.reason,
-          message: policyCheck.message,
-          batch_id: batch.id,
-          product: batch.product,
-          scan_policy: policyCheck.policy
-        };
-      }
-
-      const key = this._localScanKey(token, batch.id);
-      VC.state.tokenScans[key] = (VC.state.tokenScans[key] || 0) + 1;
-      const usedAfter = VC.state.tokenScans[key];
-      const priorScans = usedAfter - 1;
-
-      const locationDisplay = 'Demo Location';
-      const scanRow = {
-        id: crypto.randomUUID(),
-        batchId: batch.id,
-        ts: Date.now(),
-        location: locationDisplay,
-        device: /Mobile|Android|iPhone|iPad/i.test(navigator.userAgent) ? 'mobile' : 'desktop',
-        flagged: priorScans > 0
-      };
-      VC.state.scans.unshift(scanRow);
-      VC.state.save();
-
-      const unitNumber = decoded?.uid || 1;
-      const fingerprint = decoded?.jti ? VC.crypto.shortFingerprint(decoded.jti) : null;
-
-      return {
-        verified: true,
-        batch: {
-          id: batch.id,
-          product: batch.product,
-          category: batch.category,
-          origin: batch.origin,
-          farm: batch.farm,
-          harvest_date: batch.harvest_date || batch.harvest || '-',
-          cert_number: batch.cert_number || batch.cert || null,
-          supply_chain: batch.supply_chain || batch.supplyChain || [],
-          seller_name: batch.sellerName || VC.state.seller?.business_name || 'Verified Seller',
-          seller_location: VC.state.seller?.location || 'Kashmir, India',
-          seller_verified: true,
-          created_at: batch.created_at || new Date().toISOString(),
-          total_scans: VC.state.scans.filter((s) => s.batchId === batch.id).length,
-          scan_policy: batch.scan_policy || 'limited',
-          max_scans_per_unit: batch.max_scans_per_unit ?? 3
-        },
-        unit: {
-          number: unitNumber,
-          fingerprint,
-          jti: decoded?.jti,
-          first_scan: priorScans === 0,
-          scans_used: usedAfter,
-          scans_remaining: policyCheck.remaining
-        },
-        scan_policy: {
-          policy: batch.scan_policy || 'limited',
-          max_scans: batch.scan_policy === 'unlimited' ? null : (batch.max_scans_per_unit ?? 3),
-          scans_used: usedAfter,
-          scans_remaining: policyCheck.remaining
-        },
-        trust_score: priorScans === 0 ? 98 : Math.max(72, 98 - priorScans * 8),
-        scan_history: VC.state.scans
-          .filter((s) => s.batchId === batch.id)
-          .slice(0, 10)
-          .map((s) => ({
-            location_display: s.location,
-            scanned_at: new Date(s.ts).toISOString(),
-            device_type: s.device,
-            flagged: s.flagged
-          })),
-        current_scan: {
-          location: locationDisplay,
-          scanned_at: new Date().toISOString()
-        }
-      };
+    if (!this.isProductionVerify()) {
+      return this._verifyLocally(token);
     }
 
     let lat = null;
@@ -364,9 +464,15 @@ VC.db = {
       } catch {}
     }
 
+    const headers = { 'Content-Type': 'application/json' };
+    if (VC.config.supabaseKey) {
+      headers.Authorization = `Bearer ${VC.config.supabaseKey}`;
+      headers.apikey = VC.config.supabaseKey;
+    }
+
     const response = await fetch(VC.config.edgeFunctionUrl, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers,
       body: JSON.stringify({
         token,
         lat, lng, city, country,
@@ -374,8 +480,12 @@ VC.db = {
         user_agent: navigator.userAgent
       })
     });
-    if (!response.ok) throw new Error('Verification service unavailable');
-    return response.json();
+    if (!response.ok) {
+      const errBody = await response.json().catch(() => ({}));
+      throw new Error(errBody.details || errBody.error || 'Verification service unavailable');
+    }
+    const result = await response.json();
+    return { ...result, verification_mode: 'server' };
   },
 
   async getScans(limit = 50) {
@@ -467,9 +577,7 @@ VC.db = {
       VC.state.save();
     }
 
-    const canWriteRemote = this.isBackendReady()
-      && !VC.config.demoMode
-      && this.isUuid(VC.state.seller?.id);
+    const canWriteRemote = this.isBackendReady() && this.isUuid(VC.state.seller?.id);
 
     if (canWriteRemote) {
       const { error } = await VC.supabase

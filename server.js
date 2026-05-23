@@ -110,15 +110,27 @@ function ruleBasedAnalysis(scanLog) {
 
 function getPublicConfig() {
   const supabaseUrl = readEnv('VC_SUPABASE_URL', '');
+  const supabaseKey = readEnv('VC_SUPABASE_ANON_KEY', '');
   const edgeFunctionUrl = readEnv('VC_EDGE_FUNCTION_URL', '') ||
     (supabaseUrl ? `${supabaseUrl}/functions/v1/verify-qr` : '');
+  const hasBackend = Boolean(
+    supabaseUrl &&
+    supabaseKey &&
+    edgeFunctionUrl &&
+    /^https?:\/\//i.test(supabaseUrl) &&
+    /^https?:\/\//i.test(edgeFunctionUrl)
+  );
+  const demoMode = hasBackend
+    ? parseBool(readEnv('VC_DEMO_MODE', 'false'), false)
+    : parseBool(readEnv('VC_DEMO_MODE', 'true'), true);
 
   return {
     supabaseUrl,
-    supabaseKey: readEnv('VC_SUPABASE_ANON_KEY', ''),
+    supabaseKey,
     edgeFunctionUrl,
     appVersion: readEnv('VC_APP_VERSION', '1.0.0'),
-    demoMode: parseBool(readEnv('VC_DEMO_MODE', 'true'), true)
+    demoMode,
+    productionReady: hasBackend && !demoMode
   };
 }
 

@@ -25,7 +25,8 @@ VC.views.verify = async function(token) {
         SCAN_LIMIT_REACHED: 'SCAN LIMIT REACHED',
         UNKNOWN_TOKEN: 'UNREGISTERED TAG',
         DEACTIVATED: 'TAG DEACTIVATED',
-        UNIT_MISMATCH: 'TAMPER DETECTED'
+        UNIT_MISMATCH: 'TAMPER DETECTED',
+        SERVER_REQUIRED: 'SERVER VERIFICATION REQUIRED'
       };
       const label = reasonLabels[result.reason] || 'VERIFICATION FAILED';
       document.getElementById('app-view').innerHTML = `
@@ -67,6 +68,7 @@ VC.views.verify = async function(token) {
           <div class="verify-tagline">// Product Authentication Certificate</div>
         </div>
         ${VC.ui.verifiedBadge()}
+        <div class="verify-mode-badge mono">${result.verification_mode === 'server' ? '🔐 Server-verified HMAC' : '⚙ Local cryptographic verify'}</div>
         <div class="verify-hero-chip" style="background:${theme.gradient}">${theme.icon} ${theme.label} · Authentic</div>
         ${VC.ui.trustMeter(trust_score)}
         <div class="verify-card verify-card--glow">
