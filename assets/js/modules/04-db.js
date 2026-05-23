@@ -94,6 +94,11 @@ VC.db = {
 
     const batchId = VC.crypto.generateBatchId();
     const hmacSecret = await VC.crypto.generateSecret();
+    const scanPolicy = formData.scanPolicy || 'limited';
+    const maxScansPerUnit = scanPolicy === 'limited'
+      ? Math.max(1, parseInt(formData.maxScansPerUnit, 10) || 3)
+      : scanPolicy === 'single' ? 1 : 9999;
+
     const batch = {
       id: batchId,
       seller_id: VC.state.seller.id,
@@ -106,6 +111,8 @@ VC.db = {
       cert_number: formData.cert || null,
       supply_chain: formData.supplyChain,
       hmac_secret: hmacSecret,
+      scan_policy: scanPolicy,
+      max_scans_per_unit: maxScansPerUnit,
       status: 'active'
     };
 
@@ -124,7 +131,8 @@ VC.db = {
         harvest: formData.harvest,
         cert: formData.cert || null,
         supplyChain: formData.supplyChain,
-        createdAt: Date.now()
+        createdAt: Date.now(),
+        tokens
       };
       VC.state.batches.unshift(localBatch);
       VC.state.save();
@@ -135,7 +143,12 @@ VC.db = {
     if (error) throw error;
 
     const tokens = await VC.crypto.generateBatchTokens({ ...data, hmac_secret: hmacSecret });
-    const tokenRows = tokens.map((t) => ({ batch_id: batchId, unit_number: t.unit, token: t.token }));
+    const tokenRows = tokens.map((t) => ({
+      batch_id: batchId,
+      unit_number: t.unit,
+      token: t.token,
+      token_jti: t.jti
+    }));
     const { error: tokenError } = await VC.supabase.from('qr_tokens').insert(tokenRows);
     if (tokenError) throw tokenError;
 
@@ -168,10 +181,17 @@ VC.db = {
   },
 
   async getBatchTokens(batchId) {
+    const localBatch = VC.state.batches.find((b) => b.id === batchId);
+    if (localBatch?.tokens?.length) {
+      return localBatch.tokens.map((t) => ({
+        unit_number: t.unit ?? t.unit_number,
+        token: t.token,
+        token_jti: t.jti
+      }));
+    }
     if (!this.isBackendReady()) {
-      const batch = VC.state.batches.find((b) => b.id === batchId);
-      if (!batch) return [];
-      const units = batch.units || 1;
+      if (!localBatch) return [];
+      const units = localBatch.units || 1;
       return Array.from({ length: units }, (_, idx) => ({
         unit_number: idx + 1,
         token: batchId
@@ -194,19 +214,41 @@ VC.db = {
     return data || null;
   },
 
+  _localScanKey(token, batchId) {
+    return token && token.length > 20 ? token : `${batchId}:legacy`;
+  },
+
+  _checkLocalScanPolicy(batch, token) {
+    const policy = batch.scan_policy || 'limited';
+    const max = batch.max_scans_per_unit ?? 3;
+    const key = this._localScanKey(token, batch.id);
+    const used = VC.state.tokenScans[key] || 0;
+
+    if (policy === 'single' && used >= 1) {
+      return {
+        ok: false,
+        reason: 'ALREADY_REDEEMED',
+        message: 'This one-time seal was already redeemed in demo mode.',
+        used
+      };
+    }
+    if (policy === 'limited' && used >= max) {
+      return {
+        ok: false,
+        reason: 'SCAN_LIMIT_REACHED',
+        message: `Scan limit reached (${max} per unit).`,
+        used,
+        max
+      };
+    }
+    return { ok: true, used, max, policy, remaining: policy === 'unlimited' ? null : Math.max(0, (policy === 'single' ? 1 : max) - used - 1) };
+  },
+
   async verifyQR(token) {
     const useLocalVerification = !this.isBackendReady() || VC.config.demoMode;
     if (useLocalVerification) {
-      let batchId = token;
-      if (!String(token).startsWith('VC-')) {
-        try {
-          const padded = token.replace(/-/g, '+').replace(/_/g, '/');
-          const decoded = JSON.parse(atob(padded));
-          batchId = decoded.bid || token;
-        } catch {
-          batchId = token;
-        }
-      }
+      const decoded = VC.crypto.decodeTokenPayload(token);
+      const batchId = decoded?.bid || (String(token).startsWith('VC-') ? token : null);
       const batch = VC.state.batches.find((b) => b.id === batchId);
       if (!batch) {
         return {
@@ -216,6 +258,23 @@ VC.db = {
         };
       }
 
+      const policyCheck = this._checkLocalScanPolicy(batch, token);
+      if (!policyCheck.ok) {
+        return {
+          verified: false,
+          reason: policyCheck.reason,
+          message: policyCheck.message,
+          batch_id: batch.id,
+          product: batch.product,
+          scan_policy: policyCheck.policy
+        };
+      }
+
+      const key = this._localScanKey(token, batch.id);
+      VC.state.tokenScans[key] = (VC.state.tokenScans[key] || 0) + 1;
+      const usedAfter = VC.state.tokenScans[key];
+      const priorScans = usedAfter - 1;
+
       const locationDisplay = 'Demo Location';
       const scanRow = {
         id: crypto.randomUUID(),
@@ -223,10 +282,13 @@ VC.db = {
         ts: Date.now(),
         location: locationDisplay,
         device: /Mobile|Android|iPhone|iPad/i.test(navigator.userAgent) ? 'mobile' : 'desktop',
-        flagged: false
+        flagged: priorScans > 0
       };
       VC.state.scans.unshift(scanRow);
       VC.state.save();
+
+      const unitNumber = decoded?.uid || 1;
+      const fingerprint = decoded?.jti ? VC.crypto.shortFingerprint(decoded.jti) : null;
 
       return {
         verified: true,
@@ -243,8 +305,25 @@ VC.db = {
           seller_location: VC.state.seller?.location || 'Kashmir, India',
           seller_verified: true,
           created_at: batch.created_at || new Date().toISOString(),
-          total_scans: VC.state.scans.filter((s) => s.batchId === batch.id).length
+          total_scans: VC.state.scans.filter((s) => s.batchId === batch.id).length,
+          scan_policy: batch.scan_policy || 'limited',
+          max_scans_per_unit: batch.max_scans_per_unit ?? 3
         },
+        unit: {
+          number: unitNumber,
+          fingerprint,
+          jti: decoded?.jti,
+          first_scan: priorScans === 0,
+          scans_used: usedAfter,
+          scans_remaining: policyCheck.remaining
+        },
+        scan_policy: {
+          policy: batch.scan_policy || 'limited',
+          max_scans: batch.scan_policy === 'unlimited' ? null : (batch.max_scans_per_unit ?? 3),
+          scans_used: usedAfter,
+          scans_remaining: policyCheck.remaining
+        },
+        trust_score: priorScans === 0 ? 98 : Math.max(72, 98 - priorScans * 8),
         scan_history: VC.state.scans
           .filter((s) => s.batchId === batch.id)
           .slice(0, 10)
@@ -376,6 +455,152 @@ VC.db = {
         VC.ui.toast(`⚠ Fraud Alert: ${payload.new.alert_type}`, 'error');
       })
       .subscribe();
+  },
+
+  async updateBatchStatus(batchId, status) {
+    const allowed = ['active', 'suspended', 'recalled'];
+    if (!allowed.includes(status)) throw new Error('Invalid status');
+
+    const local = VC.state.batches.find((b) => b.id === batchId);
+    if (local) {
+      local.status = status;
+      VC.state.save();
+    }
+
+    const canWriteRemote = this.isBackendReady()
+      && !VC.config.demoMode
+      && this.isUuid(VC.state.seller?.id);
+
+    if (canWriteRemote) {
+      const { error } = await VC.supabase
+        .from('batches')
+        .update({ status })
+        .eq('id', batchId)
+        .eq('seller_id', VC.state.seller.id);
+      if (error) throw error;
+    }
+    return status;
+  },
+
+  getAnalytics() {
+    const batches = VC.state.batches || [];
+    const scans = VC.state.scans || [];
+    const byBatch = {};
+    const byLocation = {};
+    const byCategory = {};
+    const byDevice = { mobile: 0, desktop: 0, other: 0 };
+    const last7Days = Array.from({ length: 7 }, (_, i) => {
+      const d = new Date();
+      d.setDate(d.getDate() - (6 - i));
+      return d.toISOString().slice(0, 10);
+    });
+    const byDay = Object.fromEntries(last7Days.map((d) => [d, 0]));
+
+    scans.forEach((s) => {
+      byBatch[s.batchId] = (byBatch[s.batchId] || 0) + 1;
+      const loc = s.location || 'Unknown';
+      byLocation[loc] = (byLocation[loc] || 0) + 1;
+      const day = new Date(s.ts).toISOString().slice(0, 10);
+      if (byDay[day] != null) byDay[day] += 1;
+      const dev = (s.device || '').toLowerCase();
+      if (dev.includes('mobile')) byDevice.mobile += 1;
+      else if (dev.includes('desktop')) byDevice.desktop += 1;
+      else byDevice.other += 1;
+    });
+
+    batches.forEach((b) => {
+      const cat = b.category || 'custom';
+      const count = scans.filter((s) => s.batchId === b.id).length;
+      byCategory[cat] = (byCategory[cat] || 0) + count;
+    });
+
+    const topBatches = Object.entries(byBatch)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 8)
+      .map(([id, count]) => {
+        const batch = batches.find((b) => b.id === id);
+        return { id, count, product: batch?.product || id };
+      });
+
+    const topLocations = Object.entries(byLocation)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 8)
+      .map(([name, count]) => ({ name, count }));
+
+    const maxDay = Math.max(1, ...Object.values(byDay));
+    const scanTrend = last7Days.map((day) => ({
+      day,
+      label: new Date(day).toLocaleDateString('en-IN', { weekday: 'short' }),
+      count: byDay[day] || 0,
+      pct: Math.round(((byDay[day] || 0) / maxDay) * 100)
+    }));
+
+    const redemptionRate = batches.length
+      ? Math.round(
+        (scans.length / Math.max(1, batches.reduce((a, b) => a + (b.units || 0), 0))) * 100
+      )
+      : 0;
+
+    return {
+      totalScans: scans.length,
+      totalBatches: batches.length,
+      totalTags: batches.reduce((a, b) => a + (b.units || 0), 0),
+      flaggedScans: scans.filter((s) => s.flagged).length,
+      topBatches,
+      topLocations,
+      byCategory,
+      byDevice,
+      scanTrend,
+      redemptionRate: Math.min(100, redemptionRate)
+    };
+  },
+
+  buildDppExport(batch) {
+    const tokens = batch.tokens || [];
+    return {
+      '@context': 'https://verifychain.in/dpp/v1',
+      type: 'DigitalProductPassport',
+      issuedAt: new Date().toISOString(),
+      issuer: {
+        name: VC.state.seller?.business_name || VC.state.seller?.name,
+        location: VC.state.seller?.location,
+        verified: VC.state.seller?.verified || false
+      },
+      product: {
+        batchId: batch.id,
+        name: batch.product,
+        category: batch.category,
+        origin: batch.origin,
+        producer: batch.farm,
+        harvestDate: batch.harvest_date || batch.harvest,
+        certificationNumber: batch.cert_number || batch.cert || null,
+        units: batch.units,
+        scanPolicy: batch.scan_policy || 'limited',
+        maxScansPerUnit: batch.max_scans_per_unit ?? 3,
+        status: batch.status || 'active'
+      },
+      supplyChain: batch.supply_chain || batch.supplyChain || [],
+      units: tokens.map((t) => ({
+        unitNumber: t.unit ?? t.unit_number,
+        fingerprint: t.fingerprint || (t.jti ? VC.crypto.shortFingerprint(t.jti) : null),
+        verifyUrl: t.token ? VC.crypto.buildVerifyUrl(t.token) : null
+      })),
+      compliance: {
+        euDppReady: true,
+        cryptographicSeal: 'HMAC-SHA256',
+        uniqueTokenPerUnit: true
+      }
+    };
+  },
+
+  downloadJson(filename, data) {
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    a.click();
+    URL.revokeObjectURL(url);
   },
 
   async seedDemo() {

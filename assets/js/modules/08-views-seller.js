@@ -24,7 +24,10 @@ VC.views.seller = async function() {
           <h1 class="dash-title">${s.business_name || s.name}</h1>
           <div class="dash-location">📍 ${s.location} · Plan: ${s.plan}</div>
         </div>
-        <button class="btn-primary" onclick="VC.router.go('batch-new')">+ Register New Batch</button>
+        <div class="dash-header-actions">
+          <button class="batch-btn" onclick="VC.router.go('analytics')">📊 Analytics</button>
+          <button class="btn-primary" onclick="VC.router.go('batch-new')">+ Register New Batch</button>
+        </div>
       </div>
       <div class="stats-row">
         ${VC.ui.statCard('Total Batches', batches.length, 'across all products', 'var(--cyan)')}
@@ -35,7 +38,10 @@ VC.views.seller = async function() {
       <div class="dash-section">
         <div class="dash-section-header">
           <h2>Product Batches</h2>
-          <button class="batch-btn" onclick="VC.router.go('fraud')">View Fraud Monitor →</button>
+          <div class="dash-section-actions">
+            <button class="batch-btn" onclick="VC.router.go('trust')">Trust Center</button>
+            <button class="batch-btn" onclick="VC.router.go('fraud')">Fraud Monitor →</button>
+          </div>
         </div>
         <div class="batch-list">
           ${batches.length ? batches.map((b) => VC.ui.batchCard(b)).join('') : `
@@ -70,10 +76,45 @@ VC.views.seller = async function() {
   });
 };
 
-VC.views.batchDetail = function(batchId) {
-  VC.views.verifyByBatchId(batchId);
-};
+VC.views.showQRSheet = async function(batchId) {
+  const batch = await VC.db.getBatch(batchId);
+  if (!batch) {
+    VC.ui.toast('Batch not found', 'error');
+    return;
+  }
 
-VC.views.showQRSheet = function(batchId) {
-  VC.views.verifyByBatchId(batchId);
+  document.getElementById('app-breadcrumb').innerHTML = `/ Dashboard / ${batchId} / QR Sheet`;
+  document.getElementById('app-view').innerHTML = `
+    <div class="batch-creator">
+      <div class="batch-creator-header">
+        <button class="back-btn" onclick="VC.router.go('seller')">← Dashboard</button>
+        <h1>QR Tag Sheet</h1>
+        <p>${batch.product} · ${batch.units} unique tags</p>
+      </div>
+      <div class="qr-sheet-header">
+        <div></div>
+        <div class="qr-sheet-actions">
+          <button class="batch-btn" onclick="window.print()">🖨 Print / PDF</button>
+        </div>
+      </div>
+      <div class="qr-grid" id="qr-reprint-grid"></div>
+    </div>`;
+
+  let tokens = batch.tokens;
+  if (!tokens || !tokens.length) {
+    const rows = await VC.db.getBatchTokens(batchId);
+    tokens = rows.map((r) => ({
+      unit: r.unit_number,
+      token: r.token,
+      jti: r.token_jti,
+      fingerprint: r.token_jti ? VC.crypto.shortFingerprint(r.token_jti) : null
+    }));
+  }
+
+  if (!tokens.length) {
+    document.getElementById('qr-reprint-grid').innerHTML = '<div class="empty-state">No tokens stored for this batch.</div>';
+    return;
+  }
+
+  VC.ui.renderQRSheet(document.getElementById('qr-reprint-grid'), batch, tokens, { showAll: true });
 };

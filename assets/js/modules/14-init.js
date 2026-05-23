@@ -68,6 +68,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     goScan: () => VC.router.go('scan'),
     reset: () => { localStorage.clear(); location.reload(); }
   };
-  console.log('%cVerifyChain', 'font-size:1.2rem;font-weight:bold;color:#00e5ff');
+  console.log('%cVerifyChain', 'font-size:1.2rem;font-weight:bold;color:#d4af37');
   console.log('Nav: verifychain.goSeller() | verifychain.goVerify() | verifychain.goFraud()');
 });

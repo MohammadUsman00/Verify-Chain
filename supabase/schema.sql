@@ -30,6 +30,8 @@ CREATE TABLE IF NOT EXISTS batches (
   cert_number TEXT,
   supply_chain JSONB DEFAULT '[]'::jsonb,
   hmac_secret TEXT NOT NULL,
+  scan_policy TEXT NOT NULL DEFAULT 'limited' CHECK (scan_policy IN ('unlimited', 'limited', 'single')),
+  max_scans_per_unit INTEGER NOT NULL DEFAULT 3,
   status TEXT DEFAULT 'active' CHECK (status IN ('active', 'suspended', 'recalled')),
   scan_count INTEGER DEFAULT 0,
   created_at TIMESTAMPTZ DEFAULT NOW(),
@@ -74,6 +76,7 @@ CREATE TABLE IF NOT EXISTS qr_tokens (
   batch_id TEXT NOT NULL REFERENCES batches(id) ON DELETE CASCADE,
   unit_number INTEGER NOT NULL,
   token TEXT NOT NULL UNIQUE,
+  token_jti TEXT UNIQUE,
   active BOOLEAN DEFAULT TRUE,
   first_scanned_at TIMESTAMPTZ,
   scan_count INTEGER DEFAULT 0,
@@ -87,6 +90,7 @@ CREATE INDEX IF NOT EXISTS idx_scans_scanned_at ON scans(scanned_at DESC);
 CREATE INDEX IF NOT EXISTS idx_scans_flagged ON scans(flagged) WHERE flagged = TRUE;
 CREATE INDEX IF NOT EXISTS idx_qr_tokens_token ON qr_tokens(token);
 CREATE INDEX IF NOT EXISTS idx_qr_tokens_batch ON qr_tokens(batch_id);
+CREATE INDEX IF NOT EXISTS idx_qr_tokens_jti ON qr_tokens(token_jti);
 CREATE INDEX IF NOT EXISTS idx_fraud_alerts_seller ON fraud_alerts(seller_id);
 
 CREATE OR REPLACE FUNCTION update_updated_at()
@@ -221,9 +225,6 @@ CREATE POLICY sellers_self ON sellers FOR ALL USING (auth.uid() = auth_id);
 DROP POLICY IF EXISTS batches_owner ON batches;
 CREATE POLICY batches_owner ON batches
   FOR ALL USING (seller_id IN (SELECT id FROM sellers WHERE auth_id = auth.uid()));
-
-DROP POLICY IF EXISTS batches_public_read ON batches;
-CREATE POLICY batches_public_read ON batches FOR SELECT USING (status = 'active');
 
 DROP POLICY IF EXISTS scans_owner_read ON scans;
 CREATE POLICY scans_owner_read ON scans

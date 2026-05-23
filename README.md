@@ -3,10 +3,9 @@
 
 [![Version](https://img.shields.io/badge/version-1.0.0-blue.svg)](package.json)
 [![Status](https://img.shields.io/badge/status-production--ready-green.svg)]()
-[![Buildify](https://img.shields.io/badge/Competition-Buildify%20Kashmir%202026-gold.svg)]()
 [![Stack](https://img.shields.io/badge/Stack-Fullstack%20%7C%20Supabase%20%7C%20AI-orange.svg)]()
 
-> "Every other team built a tool for today's businesses. We built the infrastructure tomorrow's law requires."
+> "Every product deserves a provable identity — scan once, verify instantly, trust forever."
 
 ---
 
@@ -69,11 +68,13 @@ VerifyChain gives every physical product a cryptographically signed digital iden
 
 ## 🛠️ Core Features
 
-### 1. Encrypted QR Identity System
-Cryptographically signed QR codes using **HMAC-SHA256**. The signature is mathematically bound to the product data.
-*   Unique per unit or batch.
-*   Impossible to duplicate without the private key.
-*   Scannable with any smartphone camera.
+### 1. Cryptographic QR Identity System
+HMAC-SHA256 signed QR codes — each unit gets a **unique token** (UUID `jti` + random nonce). No two tags are identical.
+*   **One-Time Seal** — first scan authenticates; re-scans blocked.
+*   **Limited Scans** — configurable max verifications per tag.
+*   **Category-themed** printable tag sheets with fingerprint IDs.
+*   Server-side registry enforcement (token must exist in `qr_tokens`).
+*   Scannable with any smartphone camera — no app required.
 
 ### 2. AI-Powered Fraud Detection
 Real-time pattern analysis on every scan event. The system flags:
@@ -173,4 +174,4 @@ VerifyChain is not just anti-counterfeit tooling. It is **authenticity and compl
 > "Future-proof businesses won't just sell products. They'll prove them."
 
 ---
-*Created for **Buildify Kashmir 2026** — NIT Srinagar*
+*VerifyChain — Product Authenticity Infrastructure*

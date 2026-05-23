@@ -6,6 +6,9 @@ VC.router = {
     register: () => VC.views.auth('register'),
     'seller': () => VC.router.requireAuth(() => VC.views.seller()),
     'batch-new': () => VC.router.requireAuth(() => VC.views.batchNew()),
+    'analytics': () => VC.router.requireAuth(() => VC.views.analytics()),
+    'settings': () => VC.router.requireAuth(() => VC.views.settings()),
+    'trust': () => VC.views.trust(),
     'scan': () => VC.views.scan(),
     'fraud': () => VC.router.requireAuth(() => VC.views.fraud())
   },
@@ -45,6 +48,8 @@ VC.router = {
 
     if (route === 'verify' && param) {
       VC.views.verify(param);
+    } else if (route === 'batch' && param) {
+      VC.router.requireAuth(() => VC.views.batchDetailPage(param));
     } else if (this.routes[route]) {
       this.routes[route]();
     } else {
